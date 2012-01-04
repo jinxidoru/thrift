@@ -90,6 +90,7 @@ void THttpServer::flush() {
     "Server: Thrift/" << VERSION << CRLF <<
     "Content-Type: application/x-thrift" << CRLF <<
     "Content-Length: " << len << CRLF <<
+    "Access-Control-Allow-Origin: *" << CRLF <<
     "Connection: Keep-Alive" << CRLF <<
     CRLF;
   string header = h.str();
