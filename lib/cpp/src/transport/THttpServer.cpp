@@ -26,6 +26,49 @@
 
 namespace apache { namespace thrift { namespace transport {
 
+
+namespace {
+
+//! URL decode a string.  This converts a string which is encoded for a URL
+//! query string into its actual content.  This is used to decode requests sent
+//! through the GET method.
+string urldecode( const string& str ) {
+  const size_t sz = str.size();
+  vector<char> outp( sz+1 );
+  char* ptr = &outp[0];
+
+  for ( size_t i=0; i<sz; i++ ) {
+    if ( str[i] == '%' && ((i+2)<sz) ) {
+      char& ch = *ptr++;
+
+      // do the first character
+      i++;
+      if ( str[i] >= 'A' ) {
+        ch = (str[i]-'A'+10)*16;
+      } else {
+        ch = (str[i]-'0')*16;
+      }
+
+      // do the second character
+      i++;
+      if ( str[i] >= 'A' ) {
+        ch += (str[i]-'A'+10);
+      } else {
+        ch += (str[i]-'0');
+      }
+
+    } else {
+      *ptr++ = str[i];
+    }
+  }
+
+  return string( &outp[0], ptr );
+}
+
+}
+
+
+
 using namespace std;
 
 THttpServer::THttpServer(boost::shared_ptr<TTransport> transport) :
@@ -68,6 +111,17 @@ bool THttpServer::parseStatusLine(char* status) {
     throw TTransportException(string("Bad Status: ") + status);
   }
   *http = '\0';
+
+  // handle the GET method
+  if ( strcmp(method,"GET") == 0 ) {
+    char* qstr = strchr(path,'?');
+    if ( qstr ) {
+        string qstr_ = urldecode(qstr+1);
+        readBuffer_.write((const uint8_t*)qstr_.c_str(),qstr_.size());
+        contentLength_ = readBuffer_.available_read();
+    }
+    return true;
+  }
 
   if (strcmp(method, "POST") == 0) {
     // POST method ok, looking for content.

@@ -84,6 +84,11 @@ uint32_t THttpTransport::readMoreData() {
 
   if (readHeaders_) {
     readHeaders();
+
+    // if we are using the GET protocol, the data will already be available.
+    // There's no need to read it.
+    if ( readBuffer_.available_read() > 0 )
+      return readBuffer_.available_read();
   }
 
   if (chunked_) {
